@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  gameserver:
+    image: pong-gameserver:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/pong-
+      - WIN_SCORE=5
+    networks:
+      - pong-net
+    depends_on:
+      - mongodb
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+
+  mongodb:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - pong-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+networks:
+  pong-net:
+    driver: overlay
+
+volumes:
+  mongo-data:
