@@ -1,47 +1,55 @@
 version: "3.9"
 
 services:
-  gameserver:
-    image: pong-gameserver:latest
+  nginx:
+    image: nginx:latest
     ports:
-      - "5000:5000"
-    environment:
-      - MONGO_URI=mongodb://mongodb:27017/pong-
-      - WIN_SCORE=5
+      - "80:80"
+    volumes:
+      - nginx_data:/usr/share/nginx/html
     networks:
-      - pong-net
-    depends_on:
-      - mongodb
+      - frontend
+      - backend
     deploy:
-      replicas: 1
+      mode: global 
+      restart_policy:
+        condition: on-failure
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    deploy:
       placement:
         constraints:
           - node.role == manager
       restart_policy:
         condition: on-failure
-    healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
-        interval: 10s
-        timeout: 5s
-        retries: 3
 
-  mongodb:
-    image: mongo:7
-    volumes:
-      - mongo-data:/data/db
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
     networks:
-      - pong-net
+      - backend
     deploy:
       replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
       restart_policy:
         condition: on-failure
 
 networks:
-  pong-net:
-    driver: overlay
+  frontend:
+  backend:
 
 volumes:
-  mongo-data:
+  postgres_data:
+  nginx_data:
